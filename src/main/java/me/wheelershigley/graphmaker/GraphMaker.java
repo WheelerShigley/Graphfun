@@ -10,12 +10,14 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 public final class GraphMaker extends JavaPlugin implements SlimefunAddon {
+    public static GraphMaker instance;
 
     @Override
     public void onEnable() {
+        instance = this;
         /*Log Startup*/ {
             String padding = "      ";
-            String startup_message = padding+"GraphMaker v0, by  WheelerShigley"+padding;
+            String startup_message = padding+this.getName()+" v"+this.getPluginVersion()+padding;
 
             char[] cap = new char[startup_message.length()]; Arrays.fill(cap,'#');
             padding = new String(cap);
@@ -32,13 +34,6 @@ public final class GraphMaker extends JavaPlugin implements SlimefunAddon {
             this.getCommand("digraph").setExecutor(     new Digraph() );
             this.getCommand("digraph").setTabCompleter( new Digraph() );
         }
-
-        /*
-        SlimefunItem[] items = Slimefun.getRegistry().getAllSlimefunItems().toArray(new SlimefunItem[0]);
-        for(SlimefunItem item : items) {
-            this.getLogger().info( item.getId() );
-        }
-        */
     }
 
     @Override

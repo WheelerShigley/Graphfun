@@ -1,0 +1,9 @@
+name: GraphMaker
+version: '${project.version}'
+main: me.wheelershigley.graphmaker.GraphMaker
+api-version: '1.20'
+commands:
+  digraph:
+    description: Digraph maker (in-file)
+    usage: /<command> <item_id>
+    permission: graphmaker.digraph

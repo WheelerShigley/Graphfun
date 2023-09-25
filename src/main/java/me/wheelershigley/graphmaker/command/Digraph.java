@@ -9,6 +9,7 @@ import org.bukkit.command.TabExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +17,6 @@ import me.wheelershigley.graphmaker.GraphMaker;
 import static me.wheelershigley.graphmaker.Creator.makeGraph;
 
 public class Digraph implements TabExecutor  {
-    private static final String PLUGIN_NAME_PREFIX = "§r§9[§2"+GraphMaker.instance.getName()+"§9]§7:§r ";
 
     @Override
     public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String command_name, @NotNull String[] command_arguments) {
@@ -24,12 +24,17 @@ public class Digraph implements TabExecutor  {
 
         SlimefunItem product = Slimefun.getRegistry().getSlimefunItemIds().get( command_arguments[0].toUpperCase() );
         if(product == null) {
-            commandSender.sendMessage(PLUGIN_NAME_PREFIX+"§cInvalid id, \"§4"+command_arguments[0]+"§c\".");
+            commandSender.sendMessage(GraphMaker.instance.PLUGIN_NAME_PREFIX+"§cInvalid id, \"§4"+command_arguments[0]+"§c\".");
             return true;
         }
 
-        makeGraph(product);
-        commandSender.sendMessage(PLUGIN_NAME_PREFIX+"§7§n"+product.getId()+".dot§r§7 is at §o.../plugins/"+GraphMaker.instance.getName()+"§r§7." );
+        try {
+            makeGraph(product);
+        } catch (IOException e) {
+            commandSender.sendMessage(GraphMaker.instance.PLUGIN_NAME_PREFIX+"§c§n"+product.getId()+".dot§r§c failed to be created at §o.../plugins/"+GraphMaker.instance.getName()+"§r§c." );
+            return true;
+        }
+        commandSender.sendMessage(GraphMaker.instance.PLUGIN_NAME_PREFIX+"§7§n"+product.getId()+".dot§r§7 is at §o.../plugins/"+GraphMaker.instance.getName()+"§r§7." );
         return true;
     }
 

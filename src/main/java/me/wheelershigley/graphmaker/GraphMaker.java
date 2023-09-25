@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 public final class GraphMaker extends JavaPlugin implements SlimefunAddon {
+    public final String PLUGIN_NAME_PREFIX = "§r§9[§2"+this.getName()+"§9]§7:§r ";
     public static GraphMaker instance;
 
     @Override

@@ -1,9 +1,6 @@
 package me.wheelershigley.graphmaker;
 
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
-import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.inventory.ItemStack;
 
@@ -17,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static me.wheelershigley.graphmaker.command.CommandHelper.PLUGIN_NAME_PREFIX;
 
 public class Creator {
     private static String TAB = "  ";
@@ -48,11 +47,47 @@ public class Creator {
 
         return title_builder.toString();
     }
+    private static List<String> dive(SlimefunItem item) {
+        String item_name = PlainTextComponentSerializer.plainText().serialize( item.getItem().displayName() ); item_name = item_name.substring(1,item_name.length()-1);
+
+        ItemStack[] parts; {
+            SlimefunItem sf_item = SlimefunItem.getById( item_name.toUpperCase().replace(' ','_') );
+            if(sf_item == null) { return null; }
+            parts = sf_item.getRecipe();
+        }
+
+        List<String> returnable = new ArrayList<>();
+
+        HashMap<String,Integer> parts_counts = new HashMap<>();
+        String name, id;
+        for(ItemStack part : parts) {
+            if(part == null) { continue; }
+
+            name = PlainTextComponentSerializer.plainText().serialize( part.displayName() ); name = name.substring(1,name.length()-1);
+            id = GraphingPlugin.name_id_association.get(name);
+            if(id == null) { //non-slimefun item
+                id = name.toUpperCase().replace(' ','_');
+            }
+
+            if( parts_counts.containsKey(id) ) {
+                parts_counts.put(id, parts_counts.get(id)+item.getItem().getAmount() );
+            } else {
+                parts_counts.put(id, item.getItem().getAmount() );
+            }
+        }
+
+        name = GraphingPlugin.name_id_association.get(item_name);
+        for(Map.Entry<String,Integer> part : parts_counts.entrySet() ) {
+            returnable.add( part.getKey()+"->"+name +"[label="+part.getValue()+"]");
+        }
+
+        return returnable;
+    }
     public static void makeGraph(SlimefunItem item) throws IOException {
         String id = item.getId();
 
         //ensure folder exists
-        Path data_folder = Paths.get( GraphMaker.instance.getDataFolder().getAbsolutePath() );
+        Path data_folder = Paths.get( GraphingPlugin.instance.getDataFolder().getAbsolutePath() );
         if(Files.notExists(data_folder) ) {
             //create folder
             new File( String.valueOf(data_folder) ).mkdir();
@@ -67,42 +102,48 @@ public class Creator {
             try {
                 digraph.createNewFile();
             } catch(IOException io_exception) {
-                GraphMaker.instance.getLogger().warning(GraphMaker.instance.PLUGIN_NAME_PREFIX+" §cUnable to create director, \"§4§o"+digraph.getAbsolutePath()+"§r§4\".");
+                GraphingPlugin.instance.getLogger().warning(PLUGIN_NAME_PREFIX+" §cUnable to create director, \"§4§o"+digraph.getAbsolutePath()+"§r§4\".");
                 return;
             }
         }
 
         //construct String for file
         StringBuilder graph_code = new StringBuilder(); {
-            graph_code.append("digraph " + item.getId() + " {\n");
+            graph_code.append("digraph ").append( item.getId() ).append(" {\n").append(TAB).append(id).append("\n");
 
-            //body
-            List<String> ids = new ArrayList<>();
+                List<String> unique_ids = new ArrayList<>();
 
-                graph_code.append(TAB+id+"\n");
-                ids.add(id);
+                List<String> materials = dive(item);
+                if(materials != null) {
+                    final String DOUBLE_TAB = TAB+TAB;
+                    StringBuilder current_id = new StringBuilder(); char previous = ' '; char[] quantized_element;
+                    for (String element : materials) {
+                        graph_code.append(DOUBLE_TAB).append(element).append("\n");
 
-                List<SlimefunItem> valid_items = Slimefun.getRegistry().getAllSlimefunItems();
-                String current_id;
-                HashMap<String,Integer> parts = new HashMap<>();
-                for(ItemStack part : SlimefunItem.getById(id).getRecipe() ) {
-                    current_id = PlainTextComponentSerializer.plainText().serialize( part.displayName() ); current_id = current_id.substring(1,current_id.length()-1).toUpperCase().replace(' ','_');
-                    if( parts.containsKey(current_id) ) {
-                        parts.put( current_id, parts.get(current_id)+part.getAmount() );
-                    } else {
-                        parts.put(current_id,part.getAmount() );
+                        quantized_element = element.toCharArray();
+                        for(char current : quantized_element) {
+                            if(previous == '-' && current == '>') {
+                                current_id.setLength( current_id.length()-1 );
+                                break;
+                            }
+
+                            current_id.append(current);
+
+                            previous = current;
+                        }
+
+                        if( !unique_ids.contains( current_id.toString() ) ) {
+                            unique_ids.add( current_id.toString() );
+                            current_id.setLength(0);
+                        }
                     }
-                }
-                for(Map.Entry<String,Integer> part : parts.entrySet() ) {
-                    current_id = part.getKey();
-                    graph_code.append(TAB+TAB+current_id+"->"+id+"[label=\""+ part.getValue() +"\"]\n");
-                    ids.add(current_id);
                 }
 
             graph_code.append("\n");
 
-                for(String untitled : ids.toArray(new String[0]) ) {
-                    graph_code.append(TAB+untitled +"[label=\""+titleize(untitled)+"\"]"+ "\n");
+                graph_code.append(TAB).append(id).append("[label=\"").append( titleize(id) ).append("\"]\n");
+                for(String current : unique_ids) {
+                    graph_code.append(TAB).append(current).append("[label=\"").append( titleize(current) ).append("\"]\n");
                 }
 
             graph_code.append("}");
